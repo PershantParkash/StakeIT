@@ -58,7 +58,7 @@ app.use('*', (req, res) => {
     message: `Cannot ${req.method} ${req.originalUrl}`
   });
 });
-
+console.log("DATABASE_URL:", process.env.DATABASE_URL);
 // Start server
 const startServer = async () => {
   try {
