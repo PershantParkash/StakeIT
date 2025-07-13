@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const { testConnection, disconnect } = require('./utils/database');
+const { processExpiredGoals } = require('./utils/goalCompletion');
 
 // Load environment variables
 dotenv.config();
@@ -16,9 +17,11 @@ app.use(express.urlencoded({ extended: true }));
 
 // Import routes
 const authRoutes = require('./routes/auth');
+const goalsRoutes = require('./routes/goals');
 
 // Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/goals', goalsRoutes);
 
 // Basic route
 app.get('/', (req, res) => {
@@ -69,7 +72,31 @@ const startServer = async () => {
       console.log(`🚀 StakeIt server running on port ${PORT}`);
       console.log(`📊 Health check: http://localhost:${PORT}/health`);
       console.log(`🔐 Auth endpoints: http://localhost:${PORT}/api/auth`);
+      console.log(`🎯 Goals endpoints: http://localhost:${PORT}/api/goals`);
     });
+
+    // Schedule goal completion processing (run every hour)
+    setInterval(async () => {
+      try {
+        const results = await processExpiredGoals();
+        if (results.length > 0) {
+          console.log(`✅ Processed ${results.length} expired goals`);
+        }
+      } catch (error) {
+        console.error('❌ Error processing expired goals:', error);
+      }
+    }, 60 * 60 * 1000); // Every hour
+
+    // Process expired goals on startup
+    processExpiredGoals()
+      .then(results => {
+        if (results.length > 0) {
+          console.log(`✅ Processed ${results.length} expired goals on startup`);
+        }
+      })
+      .catch(error => {
+        console.error('❌ Error processing expired goals on startup:', error);
+      });
   } catch (error) {
     console.error('Failed to start server:', error);
     process.exit(1);
